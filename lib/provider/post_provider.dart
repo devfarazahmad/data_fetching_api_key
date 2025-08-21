@@ -1,22 +1,22 @@
 import 'package:flutter/foundation.dart';
 import '../models/post.dart';
-import '../models/comment.dart'; // Add this import
+import '../models/comment.dart';
 import '../repositories/post_repository.dart';
 
 class PostProvider with ChangeNotifier {
   final PostRepository _postRepository = PostRepository();
   
-  // Existing post state
+  // Post state
   List<Post> _posts = [];
   bool _isLoading = false;
   String _errorMessage = '';
   bool _usingLocalData = false;
 
-  // NEW: Comment state
+  // Comment state
   List<Comment> _comments = [];
   bool _isLoadingComments = false;
   String _commentsErrorMessage = '';
-  Map<int, List<Comment>> _postComments = {}; // Cache comments by post ID
+  Map<int, List<Comment>> _postComments = {};
 
   // Getters for posts
   List<Post> get posts => _posts;
@@ -24,7 +24,7 @@ class PostProvider with ChangeNotifier {
   String get errorMessage => _errorMessage;
   bool get usingLocalData => _usingLocalData;
 
-  // NEW: Getters for comments
+  // Getters for comments
   List<Comment> get comments => _comments;
   bool get isLoadingComments => _isLoadingComments;
   String get commentsErrorMessage => _commentsErrorMessage;
@@ -59,7 +59,65 @@ class PostProvider with ChangeNotifier {
     }
   }
 
-  // NEW: Load comments for a specific post
+  // Create new post
+  Future<void> createPost(Post post) async {
+    _setLoading(true);
+    notifyListeners();
+
+    try {
+      final newPost = await _postRepository.createPost(post);
+      _posts.insert(0, newPost); // Add at beginning of list
+      _errorMessage = '';
+    } catch (e) {
+      _errorMessage = 'Failed to create post: $e';
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  // Update post
+  Future<void> updatePost(Post post) async {
+    _setLoading(true);
+    notifyListeners();
+
+    try {
+      final updatedPost = await _postRepository.updatePost(post);
+      final index = _posts.indexWhere((p) => p.id == post.id);
+      if (index != -1) {
+        _posts[index] = updatedPost;
+      }
+      _errorMessage = '';
+    } catch (e) {
+      _errorMessage = 'Failed to update post: $e';
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  // Delete post
+  Future<void> deletePost(int id) async {
+    _setLoading(true);
+    notifyListeners();
+
+    try {
+      final success = await _postRepository.deletePost(id);
+      if (success) {
+        _posts.removeWhere((post) => post.id == id);
+        // Also remove any cached comments for this post
+        _postComments.remove(id);
+      }
+      _errorMessage = '';
+    } catch (e) {
+      _errorMessage = 'Failed to delete post: $e';
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  // Load comments for a specific post
   Future<void> loadCommentsForPost(int postId) async {
     _setLoadingComments(true);
     _commentsErrorMessage = '';
@@ -77,7 +135,7 @@ class PostProvider with ChangeNotifier {
     }
   }
 
-  // NEW: Load all comments
+  // Load all comments
   Future<void> loadAllComments() async {
     _setLoadingComments(true);
     _commentsErrorMessage = '';
@@ -107,7 +165,7 @@ class PostProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // NEW: Clear comments error message
+  // Clear comments error message
   void clearCommentsError() {
     _commentsErrorMessage = '';
     notifyListeners();
@@ -119,7 +177,7 @@ class PostProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // NEW: Private method to set comments loading state
+  // Private method to set comments loading state
   void _setLoadingComments(bool loading) {
     _isLoadingComments = loading;
     notifyListeners();

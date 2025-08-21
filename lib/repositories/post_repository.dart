@@ -1,26 +1,25 @@
 import '../models/post.dart';
-import '../models/comment.dart'; // Add this import
+import '../models/comment.dart';
 import '../services/api_service.dart';
 
 class PostRepository {
   final ApiService _apiService = ApiService();
 
-  // Existing post methods...
+  // GET all posts
   Future<List<Post>> getAllPosts() async {
     try {
       return await _apiService.getPosts();
     } catch (e) {
-      // Fallback to local data if API fails
       print('API call failed, using local data: $e');
       return _getLocalPosts();
     }
   }
 
+  // GET single post
   Future<Post> getPost(int id) async {
     try {
       return await _apiService.getPostById(id);
     } catch (e) {
-      // Fallback to local data if API fails
       print('API call failed, using local data: $e');
       final localPosts = await _getLocalPosts();
       return localPosts.firstWhere((post) => post.id == id, 
@@ -28,23 +27,59 @@ class PostRepository {
     }
   }
 
-  // NEW: Method to get comments for a post
+  // POST - Create new post
+  Future<Post> createPost(Post post) async {
+    try {
+      return await _apiService.createPost(post);
+    } catch (e) {
+      print('API call failed, creating post locally: $e');
+      // For local fallback, we'll generate a unique ID and add to local list
+      final newPost = Post(
+        userId: post.userId,
+        id: DateTime.now().millisecondsSinceEpoch, // Unique ID for local storage
+        title: post.title,
+        body: post.body,
+      );
+      return newPost;
+    }
+  }
+
+  // PUT - Update post
+  Future<Post> updatePost(Post post) async {
+    try {
+      return await _apiService.updatePost(post);
+    } catch (e) {
+      print('API call failed, updating post locally: $e');
+      // For local fallback, we'll just return the updated post
+      return post;
+    }
+  }
+
+  // DELETE - Delete post
+  Future<bool> deletePost(int id) async {
+    try {
+      return await _apiService.deletePost(id);
+    } catch (e) {
+      print('API call failed, deleting post locally: $e');
+      // For local fallback, we'll return true (simulate successful deletion)
+      return true;
+    }
+  }
+
+  // Comments methods (existing)...
   Future<List<Comment>> getCommentsByPostId(int postId) async {
     try {
       return await _apiService.getCommentsByPostId(postId);
     } catch (e) {
-      // Fallback to local comments if API fails
       print('API call failed, using local comments: $e');
       return _getLocalComments().where((comment) => comment.postId == postId).toList();
     }
   }
 
-  // NEW: Method to get all comments
   Future<List<Comment>> getAllComments() async {
     try {
       return await _apiService.getAllComments();
     } catch (e) {
-      // Fallback to local comments if API fails
       print('API call failed, using local comments: $e');
       return _getLocalComments();
     }
@@ -61,7 +96,7 @@ class PostRepository {
     ];
   }
 
-  // NEW: Local fallback data for comments
+  // Local fallback data for comments
   List<Comment> _getLocalComments() {
     return [
       Comment(postId: 1, id: 1, name: "id labore ex et quam laborum", email: "Eliseo@gardner.biz", body: "laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium"),
